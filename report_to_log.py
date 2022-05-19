@@ -1,29 +1,42 @@
-import pandas
+
 import pyperclip
-import re
-import time
-
-cols_in_tracker = ["Roll", "Blank", "Blank", "Blank", "Blank", "Size", "Files", "Clips", "Duration"]
-
-cols_in_report = ["Roll", "Camera", "Clips", "Duration", "Min", "Files", "Size", "GB"]
-regex_list = [r"\w\d{3}\w+", r'[A-Z]', r"\d+", r"\d+:\d+", r"min", r"\d+", r"\d+\.\d*", r"GB"]
 
 
-df = pandas.read_clipboard(sep=" ", header=None, names=cols_in_report, on_bad_lines="error")
+def report_to_log():
 
-for index, value in enumerate(df.columns):
+    content = pyperclip.waitForNewPaste()
 
-    col_value = str(df[value][0])
+    # if clipboard is empty, return
+    if content == '':
+        print('Clipboard is empty')
+        return False
 
-df["Blank"] = "-"
+    # if clipboard is not empty, split it into lines
+    lines = content.split('\r')
 
-ii = 0
+    # if len(lines[0].split()) != 8:
+    #     print('Invalid format - 1')
+    #     return False
 
-for entry in df["Duration"]:
+    output_lines = []
+
+    for line in lines:
+        row = line.split()
+        if len(row) != 8:
+            print('Invalid format - 2')
+            return False
+
+        result = f'{row[0]}\t\t\t\t{row[6]}\t{row[5]}\t{row[2]}\t{format_duration(row[3])}'
+        output_lines.append(result)
+
+    pyperclip.copy('\n'.join(output_lines))
+
+    return True
+
+
+def format_duration(entry):
 
     hmsf_list = entry.split(":")
-
-    # hmsf_list.append("00")
 
     while len(hmsf_list) < 3:
         hmsf_list.insert(0, "00")
@@ -33,17 +46,14 @@ for entry in df["Duration"]:
     if len(hmsf_list) == 2:
         hmsf_list.insert(0, "0")
 
-    df.at[ii, "Duration"] = ":".join(hmsf_list)
+    return ":".join(hmsf_list)
 
-    ii = ii + 1
 
-df = df[cols_in_tracker]
+if __name__ == '__main__':
 
-string = df.to_string(header=False, index=False, justify="left")
+    while True:
 
-string = re.sub(r"((?<=^)|(?<= )|(?<=\n)) +", "", string)
-string = string.replace(" ", "\t")
+        if report_to_log():
+            print(pyperclip.paste())
 
-print(string)
 
-pyperclip.copy(string)
